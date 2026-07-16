@@ -1,14 +1,15 @@
-from flask import Flask, jsonify
+from fastapi import FastAPI
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route("/hello")
+@app.get("/hello")
 def hello():
-    return jsonify({"message": "Hello, world!"})
+    return {"message": "Hello, world!"}
 
-@app.route("/status")
+@app.get("/status")
 def status():
-    return jsonify({"status": "ok", "service": "mini-backend"})
+    return {"status": "ok", "service": "mini-backend"}
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    import uvicorn
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
