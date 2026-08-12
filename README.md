@@ -69,3 +69,27 @@ All endpoints are documented and testable at `/docs`:
 - No database is used yet — all data lives in memory and is lost on restart. This is intentional for this stage of the assignment.
 - Both `POST` and `PUT` validate that `title` is not empty, returning `400 Bad Request` if it is.
 - Requesting a task id that doesn't exist returns `404 Not Found` with a JSON error message.
+
+
+## AI vs me (Stage 7 bonus)
+
+**My prompt to the AI:**
+
+> This is built in python in vs code, i have used fast api and import it first, the doors in my api are tasks, put, update, delete basically there are 7 doors. the url path is task 1, 2, all tasks and docs. 200 is the number for successful creation while 404 is for successful delete. 404 is when something not found. If I do not write anything in between "" this it remains empty and return invalid. The data lives in database, it should not survive when server restarts. Yes there is an interactive docs page and it should be found on the link given.
+
+**What the AI did better:**
+Nothing structurally — it produced a much simpler, shorter file than mine, but that's not "better," it's because it followed my prompt literally, gaps and all. I fully understand the AI's version; it's actually simpler than mine because it skips validation status codes and Pydantic models.
+
+**What it got wrong or quietly ignored:**
+- I told it 200 for "successful creation" and 404 for "successful delete" — both are backwards from real convention (should be 201 and 204). The AI didn't correct me, it just followed my mistake, which means a *successful* delete and a *not found* error now return the exact same status code.
+- I never gave a status code for invalid (empty) input, so the AI just returned a normal 200 response with an error message buried inside it — the same "polite lie" problem I fixed back in Stage 2 of my own build.
+- I said data "lives in a database" but also "should not survive restart" — a real contradiction. The AI silently picked in-memory storage and ignored the word "database" without telling me it was resolving a contradiction.
+- It skipped the `/` and `/health` endpoints entirely, since I never mentioned them in this prompt.
+
+**What my prompt forgot to specify — and what the AI silently decided:**
+- I never said how data should arrive (JSON body vs. query parameter) — the AI chose to accept `title` as a raw parameter instead of a proper JSON body.
+- I never asked for validation error *messages*, so it returned a bare `{"error": "invalid"}` instead of a helpful message.
+- I never mentioned docstrings/descriptions, so none were added, even though my real Swagger docs have them.
+
+**One-sentence takeaway after improving the prompt:**
+When I rewrote the prompt with the *correct* status codes (201 create, 204 delete, 400 invalid, 404 not found) and specified JSON body input, the regenerated version matched my hand-built logic almost exactly — proving the original gap was entirely due to my prompt, not the AI's capability.
