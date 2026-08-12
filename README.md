@@ -62,7 +62,7 @@ content-type: application/json
 
 All endpoints are documented and testable at `/docs`:
 
-![Swagger UI screenshot](swagger-screenshot.png)
+![Swagger UI screenshot](swagger-screenshot.PNG)
 
 ## Notes
 
