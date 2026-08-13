@@ -1,8 +1,18 @@
 # Task API
 
-A small CRUD API built with **FastAPI** that manages a to-do list of tasks. Built as part of the FlyRank Backend Internship, Week 2, Assignment A1.
+A small CRUD API built with **FastAPI** that manages a to-do list of tasks. Built as part of the FlyRank Backend Internship — Week 2 (Assignment A1: in-memory version) and Week 3 (Assignment A2: SQLite database version).
 
-Data is stored **in memory** (a Python list) — this means all tasks reset every time the server restarts. A real database is coming in Week 3.
+Data is now stored in a **SQLite database** (`tasks.db`) instead of a Python list — this means tasks now survive a server restart.
+
+## Why SQLite?
+
+SQLite was chosen because it needs no separate server or installation — the entire database is just one file (`tasks.db`) that lives in this project folder. It's the simplest possible way to add real, persistent storage to a small API like this one, without the setup overhead of something like PostgreSQL.
+
+## Where the database lives
+
+- The database file is `tasks.db`, in the root of this project.
+- It is created **automatically** the first time the app starts — you don't need to create it manually.
+- It is git-ignored (see `.gitignore`), so every fresh clone of this repo starts with a clean, empty database that gets seeded with 3 example tasks on first run.
 
 ## How to run this
 
@@ -27,6 +37,8 @@ uvicorn main:app --reload
 
 The server will start at **http://127.0.0.1:8000**
 
+On first run, `tasks.db` is created automatically with 3 seeded example tasks. Restarting the server does not duplicate them.
+
 Interactive API docs (Swagger UI) are available at **http://127.0.0.1:8000/docs**
 
 ## Endpoints
@@ -40,6 +52,8 @@ Interactive API docs (Swagger UI) are available at **http://127.0.0.1:8000/docs*
 | POST   | `/tasks`        | Create a new task                   | 201     | 400           |
 | PUT    | `/tasks/{id}`   | Update a task's title and/or done   | 200     | 400, 404      |
 | DELETE | `/tasks/{id}`   | Delete a task                       | 204     | 404           |
+
+These endpoints and status codes are unchanged from Assignment 1 — only the storage underneath changed from an in-memory list to SQLite.
 
 ## Example request
 
@@ -55,8 +69,22 @@ curl -i -X POST http://127.0.0.1:8000/tasks \
 HTTP/1.1 201 Created
 content-type: application/json
 
-{"id":4,"title":"Buy milk","done":false}
+{"id":4,"title":"Buy milk","done":0}
 ```
+
+## Exploring the database directly
+
+You can open `tasks.db` in [DB Browser for SQLite](https://sqlitebrowser.org) to view and edit the data directly — any change made there shows up instantly through the API, with no restart needed, since both are reading the same file.
+
+Example query I ran in DB Browser:
+
+```sql
+DELETE FROM tasks WHERE done = 1;
+```
+
+This deleted all tasks that were marked as completed — after first running `UPDATE tasks SET done = 1;`, every task had been marked done, so this query deleted all 3 rows in the table.
+
+![Database screenshot](db-screenshot.PNG)
 
 ## Swagger UI
 
@@ -66,12 +94,12 @@ All endpoints are documented and testable at `/docs`:
 
 ## Notes
 
-- No database is used yet — all data lives in memory and is lost on restart. This is intentional for this stage of the assignment.
+- Data is stored in `tasks.db` (SQLite) and survives server restarts.
 - Both `POST` and `PUT` validate that `title` is not empty, returning `400 Bad Request` if it is.
 - Requesting a task id that doesn't exist returns `404 Not Found` with a JSON error message.
+- All database queries use parameterized placeholders (`?`) instead of inserting values directly into SQL strings, to keep the database safe from malformed or malicious input.
 
-
-## AI vs me (Stage 7 bonus)
+## AI vs me (Assignment 1 bonus)
 
 **My prompt to the AI:**
 
