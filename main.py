@@ -7,13 +7,7 @@ app = FastAPI()
 class NewTask(BaseModel): title: str
 class UpdateTask(BaseModel): title: str | None = None; done: bool | None = None
 
-tasks = [
-    {"id": 1, "title": "Buy milk", "done": False},
-    {"id": 2, "title": "Walk the dog", "done": False},
-    {"id": 3, "title": "Finish homework", "done": True},
-]
-
-# ---------- NEW: Database setup (Stage 0) ----------
+# ---------- Database setup ----------
 
 def get_db_connection():
     """Open a connection to our tasks.db file. Creates the file if it doesn't exist yet."""
@@ -96,22 +90,47 @@ def create_task(new_task: NewTask):
 @app.put("/tasks/{task_id}")
 def update_task(task_id: int, changes: UpdateTask):
     """Update an existing task's title and/or done status."""
-    for task in tasks:
-        if task["id"] == task_id:
-            if changes.title is not None:
-                if changes.title.strip() == "":
-                    raise HTTPException(status_code=400, detail="Title cannot be empty")
-                task["title"] = changes.title
-            if changes.done is not None:
-                task["done"] = changes.done
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = get_db_connection()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+
+    if row is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+    # start with the existing values, then apply any changes that were sent
+    new_title = row["title"]
+    new_done = row["done"]
+
+    if changes.title is not None:
+        if changes.title.strip() == "":
+            conn.close()
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        new_title = changes.title
+
+    if changes.done is not None:
+        new_done = 1 if changes.done else 0
+
+    conn.execute(
+        "UPDATE tasks SET title = ?, done = ? WHERE id = ?",
+        (new_title, new_done, task_id)
+    )
+    conn.commit()
+
+    updated_row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    conn.close()
+    return dict(updated_row)
 
 @app.delete("/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int):
     """Delete a task by its ID."""
-    for task in tasks:
-        if task["id"] == task_id:
-            tasks.remove(task)
-            return
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = get_db_connection()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+
+    if row is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return
