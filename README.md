@@ -121,3 +121,5 @@ Nothing structurally — it produced a much simpler, shorter file than mine, but
 
 **One-sentence takeaway after improving the prompt:**
 When I rewrote the prompt with the *correct* status codes (201 create, 204 delete, 400 invalid, 404 not found) and specified JSON body input, the regenerated version matched my hand-built logic almost exactly — proving the original gap was entirely due to my prompt, not the AI's capability.
+
+## Database Run Postgres locally with: docker run --name taskdb -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=tasks -p 5432:5432 -v taskdata:/var/lib/postgresql/data -d postgres:16
