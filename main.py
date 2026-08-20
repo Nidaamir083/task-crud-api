@@ -4,10 +4,18 @@ from psycopg.rows import dict_row
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from supabase import create_client, Client
 
 load_dotenv()
 
 app = FastAPI()
+
+##This one "Client" object is how our code talks to supabase. 
+##We will reuse it for login, signup, logout and token verification.
+supabase: Client = create_client(
+    os.environ["SUPABASE_URL"],
+    os.environ["SUPABASE_KEY"]
+)
 
 class NewTask(BaseModel): title: str
 class UpdateTask(BaseModel): title: str | None = None; done: bool | None = None
