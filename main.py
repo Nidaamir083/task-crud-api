@@ -2,7 +2,7 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from supabase import create_client, Client
 
@@ -206,5 +206,34 @@ def login(credentials: AuthRequest):
         "access_token": result.session.access_token,
         "refresh_token": result.session.refresh_token
     }
+
+# ---------- END NEW CODE ----------
+
+
+# ---------- Public & protected gates (NEW - Stage 2) ----------
+
+@app.get("/public/info")
+def public_info():
+    """Anyone can call this - no ticket (token) required."""
+    return {"message": "Welcome stranger! This info is public."}
+
+
+@app.get("/protected/profile")
+def protected_profile(authorization: str | None = Header(default=None)):
+    """Only lets you through if you present a token in the
+    Authorization header, shaped like: Authorization: Bearer <token>
+    NOTE: we are only checking a token was SENT here - Stage 3 will
+    verify it is actually real."""
+
+    # authorization will look like: "Bearer eyJhbGciOi..."
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Access token required")
+
+    token = authorization.removeprefix("Bearer ").strip()
+    if token == "":
+        raise HTTPException(status_code=401, detail="Access token required")
+
+    # Stage 3 will replace this placeholder with real verification
+    return {"message": "You sent a token - not verified yet (Stage 3 next)"}
 
 # ---------- END NEW CODE ----------
