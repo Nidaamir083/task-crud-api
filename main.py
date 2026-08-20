@@ -254,6 +254,13 @@ def protected_profile(current_user = Depends(get_current_user)):
     }
 
 
+@app.get("/protected/dashboard")
+def protected_dashboard(current_user = Depends(get_current_user)):
+    """A second protected route, reusing the SAME guard as /protected/profile.
+    No new auth code was written - that's the whole point of middleware."""
+    return {"message": f"Welcome to your dashboard, {current_user.email}!"}
+
+
 @app.post("/auth/logout", status_code=204)
 def logout(current_user = Depends(get_current_user)):
     """End the user's session via Supabase. Protected: you must present
