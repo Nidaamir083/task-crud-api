@@ -3,6 +3,7 @@ import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from supabase import create_client, Client
 
@@ -212,16 +213,20 @@ def login(credentials: AuthRequest):
 
 # ---------- Public & protected gates (NEW - Stage 2) ----------
 
+# ---------- Swagger bearer auth setup (NEW - Stage 5) ----------
+# FastAPI notices this HTTPBearer object and automatically draws the
+# "Authorize" padlock on /docs for any route that uses it below.
+bearer_scheme = HTTPBearer()
+# ---------- END NEW CODE ----------
+
+
 # ---------- Reusable auth guard (NEW - Stage 4) ----------
 # Any route that adds "current_user = Depends(get_current_user)" to its
 # parameters gets this check run automatically BEFORE its own code runs.
 # One guard, reused everywhere - instead of pasting this logic into
 # every protected route.
-def get_current_user(authorization: str | None = Header(default=None)):
-    if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Access token required")
-
-    token = authorization.removeprefix("Bearer ").strip()
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    token = credentials.credentials.strip()
     if token == "":
         raise HTTPException(status_code=401, detail="Access token required")
 
