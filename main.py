@@ -2,7 +2,7 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
 from supabase import create_client, Client
 
@@ -212,20 +212,12 @@ def login(credentials: AuthRequest):
 
 # ---------- Public & protected gates (NEW - Stage 2) ----------
 
-@app.get("/public/info")
-def public_info():
-    """Anyone can call this - no ticket (token) required."""
-    return {"message": "Welcome stranger! This info is public."}
-
-
-@app.get("/protected/profile")
-def protected_profile(authorization: str | None = Header(default=None)):
-    """Only lets you through if you present a REAL, valid token in the
-    Authorization header, shaped like: Authorization: Bearer <token>
-    We ask Supabase to check the token - this is a real network call,
-    so the answer is trustworthy."""
-
-    # authorization will look like: "Bearer eyJhbGciOi..."
+# ---------- Reusable auth guard (NEW - Stage 4) ----------
+# Any route that adds "current_user = Depends(get_current_user)" to its
+# parameters gets this check run automatically BEFORE its own code runs.
+# One guard, reused everywhere - instead of pasting this logic into
+# every protected route.
+def get_current_user(authorization: str | None = Header(default=None)):
     if authorization is None or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Access token required")
 
@@ -241,11 +233,32 @@ def protected_profile(authorization: str | None = Header(default=None)):
     if result is None or result.user is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user = result.user
+    return result.user
+# ---------- END NEW CODE ----------
+
+
+@app.get("/public/info")
+def public_info():
+    """Anyone can call this - no ticket (token) required."""
+    return {"message": "Welcome stranger! This info is public."}
+
+
+@app.get("/protected/profile")
+def protected_profile(current_user = Depends(get_current_user)):
+    """Only real, verified users reach this point - the guard
+    (get_current_user) already checked the token before this code runs."""
     return {
-        "id": user.id,
-        "email": user.email,
-        "created_at": user.created_at
+        "id": current_user.id,
+        "email": current_user.email,
+        "created_at": current_user.created_at
     }
+
+
+@app.post("/auth/logout", status_code=204)
+def logout(current_user = Depends(get_current_user)):
+    """End the user's session via Supabase. Protected: you must present
+    a valid token to log yourself out."""
+    supabase.auth.sign_out()
+    return
 
 # ---------- END NEW CODE ----------
