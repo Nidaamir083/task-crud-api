@@ -10,15 +10,25 @@ load_dotenv()
 
 app = FastAPI()
 
-##This one "Client" object is how our code talks to supabase. 
-##We will reuse it for login, signup, logout and token verification.
+# ---------- Supabase setup (NEW - Stage 0) ----------
+# This one "client" object is how our code talks to Supabase.
+# We will reuse it for signup, login, logout, and token verification.
 supabase: Client = create_client(
     os.environ["SUPABASE_URL"],
     os.environ["SUPABASE_KEY"]
 )
+# ---------- END NEW CODE ----------
 
 class NewTask(BaseModel): title: str
 class UpdateTask(BaseModel): title: str | None = None; done: bool | None = None
+
+# ---------- Auth request shapes (NEW - Stage 1) ----------
+# This describes what a signup/login request body must look like:
+# a JSON object with "email" and "password" fields.
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+# ---------- END NEW CODE ----------
 
 # ---------- Database setup ----------
 
@@ -159,3 +169,42 @@ def delete_task(task_id: int):
     conn.commit()
     conn.close()
     return
+
+
+# ---------- Auth routes (NEW - Stage 1) ----------
+
+@app.post("/auth/signup", status_code=201)
+def signup(credentials: AuthRequest):
+    """Create a new user account via Supabase. The server never stores
+    or hashes the password itself - Supabase handles that."""
+    if credentials.email.strip() == "" or credentials.password.strip() == "":
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    result = supabase.auth.sign_up({
+        "email": credentials.email,
+        "password": credentials.password
+    })
+    return result.user
+
+
+@app.post("/auth/login")
+def login(credentials: AuthRequest):
+    """Log a user in via Supabase and return their access token (JWT)
+    and refresh token."""
+    if credentials.email.strip() == "" or credentials.password.strip() == "":
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    try:
+        result = supabase.auth.sign_in_with_password({
+            "email": credentials.email,
+            "password": credentials.password
+        })
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid login credentials")
+
+    return {
+        "access_token": result.session.access_token,
+        "refresh_token": result.session.refresh_token
+    }
+
+# ---------- END NEW CODE ----------
