@@ -220,10 +220,10 @@ def public_info():
 
 @app.get("/protected/profile")
 def protected_profile(authorization: str | None = Header(default=None)):
-    """Only lets you through if you present a token in the
+    """Only lets you through if you present a REAL, valid token in the
     Authorization header, shaped like: Authorization: Bearer <token>
-    NOTE: we are only checking a token was SENT here - Stage 3 will
-    verify it is actually real."""
+    We ask Supabase to check the token - this is a real network call,
+    so the answer is trustworthy."""
 
     # authorization will look like: "Bearer eyJhbGciOi..."
     if authorization is None or not authorization.startswith("Bearer "):
@@ -233,7 +233,19 @@ def protected_profile(authorization: str | None = Header(default=None)):
     if token == "":
         raise HTTPException(status_code=401, detail="Access token required")
 
-    # Stage 3 will replace this placeholder with real verification
-    return {"message": "You sent a token - not verified yet (Stage 3 next)"}
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    if result is None or result.user is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = result.user
+    return {
+        "id": user.id,
+        "email": user.email,
+        "created_at": user.created_at
+    }
 
 # ---------- END NEW CODE ----------
